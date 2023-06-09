@@ -26,6 +26,7 @@ func main() {
 		logoutCommand(nil),
 		versionCommand(),
 		inspectCommand(nil),
+		attachCommand(nil),
 	)
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
