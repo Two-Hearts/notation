@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/notaryproject/notation-go"
-	notationregistry "github.com/notaryproject/notation-go/registry"
 	"github.com/notaryproject/notation/cmd/notation/internal/experimental"
 	"github.com/notaryproject/notation/internal/cmd"
 	"github.com/notaryproject/notation/internal/envelope"
@@ -36,13 +35,16 @@ type signOpts struct {
 	cmd.LoggingFlagOpts
 	cmd.SignerFlagOpts
 	SecureFlagOpts
-	expiry            time.Duration
-	pluginConfig      []string
-	userMetadata      []string
-	reference         string
-	allowReferrersAPI bool
-	ociLayout         bool
-	inputType         inputType
+	expiry              time.Duration
+	pluginConfig        []string
+	userMetadata        []string
+	reference           string
+	allowReferrersAPI   bool
+	ociLayout           bool
+	inputType           inputType
+	filePath            string
+	fileAttachReference string
+	fileArtifactType    string
 }
 
 func signCommand(opts *signOpts) *cobra.Command {
@@ -115,6 +117,9 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 	command.Flags().BoolVar(&opts.ociLayout, "oci-layout", false, "[Experimental] sign the artifact stored as OCI image layout")
 	command.MarkFlagsMutuallyExclusive("oci-layout", "allow-referrers-api")
 	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
+	command.Flags().StringVar(&opts.filePath, "file", "", "file path of the target file to be signed")
+	command.Flags().StringVar(&opts.fileAttachReference, "attach", "", "subject reference to attach the file")
+	command.Flags().StringVar(&opts.fileArtifactType, "file-artifact-type", "", "artifact type of the target file to be signed")
 	return command
 }
 
@@ -127,6 +132,9 @@ func runSign(command *cobra.Command, cmdOpts *signOpts) error {
 	if err != nil {
 		return err
 	}
+	if cmdOpts.filePath != "" {
+		return signFile(command, cmdOpts, signer)
+	}
 	if cmdOpts.allowReferrersAPI {
 		fmt.Fprintln(os.Stderr, "Warning: using the Referrers API to store signature. On success, must set the `--allow-referrers-api` flag to list, inspect, and verify the signature.")
 	}
@@ -134,7 +142,7 @@ func runSign(command *cobra.Command, cmdOpts *signOpts) error {
 	if err != nil {
 		return err
 	}
-	signOpts, err := prepareSigningOpts(ctx, cmdOpts, sigRepo)
+	signOpts, err := prepareSigningOpts(ctx, cmdOpts)
 	if err != nil {
 		return err
 	}
@@ -162,7 +170,7 @@ func runSign(command *cobra.Command, cmdOpts *signOpts) error {
 	return nil
 }
 
-func prepareSigningOpts(ctx context.Context, opts *signOpts, sigRepo notationregistry.Repository) (notation.SignOptions, error) {
+func prepareSigningOpts(ctx context.Context, opts *signOpts) (notation.SignOptions, error) {
 	mediaType, err := envelope.GetEnvelopeMediaType(opts.SignerFlagOpts.SignatureFormat)
 	if err != nil {
 		return notation.SignOptions{}, err
@@ -184,4 +192,8 @@ func prepareSigningOpts(ctx context.Context, opts *signOpts, sigRepo notationreg
 		UserMetadata: userMetadata,
 	}
 	return signOpts, nil
+}
+
+func signFile(command *cobra.Command, cmdOpts *signOpts, signer notation.Signer) error {
+	return nil
 }
