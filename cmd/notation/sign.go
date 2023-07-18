@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
+	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 )
@@ -50,6 +51,7 @@ type signOpts struct {
 	inputType         inputType
 	filePath          string
 	fileMediaType     string
+	outputPath        string
 }
 
 func signCommand(opts *signOpts) *cobra.Command {
@@ -97,6 +99,9 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 		Long:  longMessage,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
+				if opts.filePath != "" && opts.outputPath != "" {
+					return nil
+				}
 				return errors.New("missing reference")
 			}
 			opts.reference = args[0]
@@ -124,6 +129,7 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
 	command.Flags().StringVar(&opts.filePath, "file", "", "file path of the target file to be signed")
 	command.Flags().StringVar(&opts.fileMediaType, "file-artifact-type", "", "artifact type of the target file to be signed")
+	command.Flags().StringVar(&opts.outputPath, "output", "", "output path of the target file along with signature")
 	return command
 }
 
@@ -218,7 +224,10 @@ func signFile(ctx context.Context, cmdOpts *signOpts, signer notation.Signer, si
 		return err
 	}
 	fmt.Printf("manifestDescriptor: %+v\n", manifestDescriptor)
-	ref := manifestDescriptor.Digest.String()
+	ref, err := tagWithDigest(manifestDescriptor.Digest.String())
+	if err != nil {
+		return err
+	}
 	if err := store.Tag(ctx, manifestDescriptor, ref); err != nil {
 		return err
 	}
@@ -237,16 +246,27 @@ func signFile(ctx context.Context, cmdOpts *signOpts, signer notation.Signer, si
 		return err
 	}
 	fmt.Println("Successfully signed", cmdOpts.filePath)
+	if cmdOpts.outputPath != "" {
+		sigOci, err := oci.New(cmdOpts.outputPath)
+		if err != nil {
+			return err
+		}
+		desc, err := oras.ExtendedCopy(ctx, store, ref, sigOci, "", oras.DefaultExtendedCopyOptions)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Successfully saved target file along with signature to: %s. File descriptor: %+v\n", cmdOpts.outputPath, desc)
+		return nil
+	}
 	sigRepo, err := getOrasRemoteRepository(ctx, &cmdOpts.SecureFlagOpts, cmdOpts.reference, cmdOpts.allowReferrersAPI)
 	if err != nil {
 		return err
 	}
-	tagName := "latest"
-	desc, err := oras.ExtendedCopy(ctx, store, ref, sigRepo, tagName, oras.DefaultExtendedCopyOptions)
+	desc, err := oras.ExtendedCopy(ctx, store, ref, sigRepo, "", oras.DefaultExtendedCopyOptions)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("ExtendedCopy desc: %+v\n", desc)
+	fmt.Printf("Successfully saved target file along with signature to: %s@%s\n", cmdOpts.reference, desc.Digest.String())
 	return nil
 }
 
@@ -272,4 +292,12 @@ func getOrasRemoteRepository(ctx context.Context, opts *SecureFlagOpts, referenc
 		}
 	}
 	return remoteRepo, nil
+}
+
+func tagWithDigest(digest string) (string, error) {
+	_, tag, found := strings.Cut(digest, ":")
+	if !found {
+		return "", errors.New("invalid digest")
+	}
+	return tag, nil
 }
