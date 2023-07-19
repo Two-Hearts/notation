@@ -18,8 +18,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/notaryproject/notation-go"
 	"github.com/notaryproject/notation-go/log"
@@ -50,7 +52,6 @@ type signOpts struct {
 	ociLayout         bool
 	inputType         inputType
 	filePath          string
-	fileMediaType     string
 	outputPath        string
 }
 
@@ -127,9 +128,8 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 	command.Flags().BoolVar(&opts.ociLayout, "oci-layout", false, "[Experimental] sign the artifact stored as OCI image layout")
 	command.MarkFlagsMutuallyExclusive("oci-layout", "allow-referrers-api")
 	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
-	command.Flags().StringVar(&opts.filePath, "file", "", "file path of the target file to be signed")
-	command.Flags().StringVar(&opts.fileMediaType, "file-artifact-type", "", "artifact type of the target file to be signed")
-	command.Flags().StringVar(&opts.outputPath, "output", "", "output path of the target file along with signature")
+	command.Flags().StringVar(&opts.filePath, "file", "", "target file to be signed, in format of <file_path>:<file_media_type>")
+	command.Flags().StringVar(&opts.outputPath, "output", "", "output OCI layout path of the target file along with signature")
 	return command
 }
 
@@ -146,11 +146,11 @@ func runSign(command *cobra.Command, cmdOpts *signOpts) error {
 	if err != nil {
 		return err
 	}
-	if cmdOpts.filePath != "" {
-		return signFile(ctx, cmdOpts, signer, signOpts)
-	}
 	if cmdOpts.allowReferrersAPI {
 		fmt.Fprintln(os.Stderr, "Warning: using the Referrers API to store signature. On success, must set the `--allow-referrers-api` flag to list, inspect, and verify the signature.")
+	}
+	if cmdOpts.filePath != "" {
+		return signFile(ctx, cmdOpts, signer, signOpts)
 	}
 	sigRepo, err := getRepository(ctx, cmdOpts.inputType, cmdOpts.reference, &cmdOpts.SecureFlagOpts, cmdOpts.allowReferrersAPI)
 	if err != nil {
@@ -210,20 +210,27 @@ func signFile(ctx context.Context, cmdOpts *signOpts, signer notation.Signer, si
 		return err
 	}
 	defer store.Close()
-
-	fileDesc, err := store.Add(ctx, cmdOpts.filePath, cmdOpts.fileMediaType, "")
+	var filePath string
+	var fileMediaType string
+	idx := strings.LastIndex(cmdOpts.filePath, ":")
+	if idx == -1 || (idx == 1 && len(cmdOpts.filePath) > 2 && unicode.IsLetter(rune(cmdOpts.filePath[0])) && cmdOpts.filePath[2] == '\\') {
+		filePath = cmdOpts.filePath
+	} else {
+		filePath, fileMediaType = cmdOpts.filePath[:idx], cmdOpts.filePath[idx+1:]
+	}
+	fileDesc, err := store.Add(ctx, filepath.Base(filePath), fileMediaType, filePath)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("file descriptor: %+v\n", fileDesc)
+	fmt.Printf("file blob descriptor: %+v\n", fileDesc)
 	opts := oras.PackOptions{
 		PackImageManifest: true,
 	}
-	manifestDescriptor, err := oras.Pack(ctx, store, cmdOpts.fileMediaType, []ocispec.Descriptor{fileDesc}, opts)
+	manifestDescriptor, err := oras.Pack(ctx, store, fileMediaType, []ocispec.Descriptor{fileDesc}, opts)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("manifestDescriptor: %+v\n", manifestDescriptor)
+	fmt.Printf("file manifest descriptor to be signed: %+v\n", manifestDescriptor)
 	ref, err := tagWithDigest(manifestDescriptor.Digest.String())
 	if err != nil {
 		return err
@@ -240,12 +247,12 @@ func signFile(ctx context.Context, cmdOpts *signOpts, signer notation.Signer, si
 		if errors.As(err, &errorPushSignatureFailed) && strings.Contains(err.Error(), referrersTagSchemaDeleteError) {
 			fmt.Fprintln(os.Stderr, "Warning: Removal of outdated referrers index from remote registry failed. Garbage collection may be required.")
 			// write out
-			fmt.Println("Successfully signed", cmdOpts.filePath)
+			fmt.Println("Successfully signed", filePath)
 			return nil
 		}
 		return err
 	}
-	fmt.Println("Successfully signed", cmdOpts.filePath)
+	fmt.Println("Successfully signed", filePath)
 	if cmdOpts.outputPath != "" {
 		sigOci, err := oci.New(cmdOpts.outputPath)
 		if err != nil {
