@@ -18,24 +18,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/notaryproject/notation-go"
-	"github.com/notaryproject/notation-go/log"
-	notationregistry "github.com/notaryproject/notation-go/registry"
 	"github.com/notaryproject/notation/cmd/notation/internal/experimental"
 	"github.com/notaryproject/notation/internal/cmd"
 	"github.com/notaryproject/notation/internal/envelope"
+	"github.com/notaryproject/notation/internal/osutil"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/spf13/cobra"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
-	"oras.land/oras-go/v2/content/oci"
-	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 const referrersTagSchemaDeleteError = "failed to delete dangling referrers index"
@@ -100,7 +92,7 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 		Long:  longMessage,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if opts.filePath != "" && opts.outputPath != "" {
+				if opts.filePath != "" {
 					return nil
 				}
 				return errors.New("missing reference")
@@ -128,8 +120,9 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 	command.Flags().BoolVar(&opts.ociLayout, "oci-layout", false, "[Experimental] sign the artifact stored as OCI image layout")
 	command.MarkFlagsMutuallyExclusive("oci-layout", "allow-referrers-api")
 	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
-	command.Flags().StringVar(&opts.filePath, "file", "", "target file to be signed, in format of <file_path>:<file_media_type>")
-	command.Flags().StringVar(&opts.outputPath, "output", "", "output OCI layout path of the target file along with signature")
+	command.Flags().StringVar(&opts.filePath, "file", "", "path of target file to be signed")
+	command.Flags().StringVar(&opts.outputPath, "output", "", "output path of signature")
+	command.MarkFlagsRequiredTogether("file", "output")
 	return command
 }
 
@@ -146,11 +139,11 @@ func runSign(command *cobra.Command, cmdOpts *signOpts) error {
 	if err != nil {
 		return err
 	}
+	if cmdOpts.filePath != "" {
+		return signFile(ctx, cmdOpts, signer, signOpts.SignerSignOptions)
+	}
 	if cmdOpts.allowReferrersAPI {
 		fmt.Fprintln(os.Stderr, "Warning: using the Referrers API to store signature. On success, must set the `--allow-referrers-api` flag to list, inspect, and verify the signature.")
-	}
-	if cmdOpts.filePath != "" {
-		return signFile(ctx, cmdOpts, signer, signOpts)
 	}
 	sigRepo, err := getRepository(ctx, cmdOpts.inputType, cmdOpts.reference, &cmdOpts.SecureFlagOpts, cmdOpts.allowReferrersAPI)
 	if err != nil {
@@ -204,107 +197,19 @@ func prepareSigningOpts(ctx context.Context, opts *signOpts) (notation.SignOptio
 	return signOpts, nil
 }
 
-func signFile(ctx context.Context, cmdOpts *signOpts, signer notation.Signer, signOpts notation.SignOptions) error {
-	store, err := file.New("")
-	if err != nil {
-		return err
+func signFile(ctx context.Context, cmdOpts *signOpts, signer notation.Signer, signerOpts notation.SignerSignOptions) error {
+	if cmdOpts.outputPath == "" {
+		return errors.New("signing file, output path cannot be empty")
 	}
-	defer store.Close()
-	var filePath string
-	var fileMediaType string
-	idx := strings.LastIndex(cmdOpts.filePath, ":")
-	if idx == -1 || (idx == 1 && len(cmdOpts.filePath) > 2 && unicode.IsLetter(rune(cmdOpts.filePath[0])) && cmdOpts.filePath[2] == '\\') {
-		filePath = cmdOpts.filePath
-	} else {
-		filePath, fileMediaType = cmdOpts.filePath[:idx], cmdOpts.filePath[idx+1:]
-	}
-	fileDesc, err := store.Add(ctx, filepath.Base(filePath), fileMediaType, filePath)
+	fileDesc, err := osutil.DescriptorFromFile(cmdOpts.filePath)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("file blob descriptor: %+v\n", fileDesc)
-	opts := oras.PackOptions{
-		PackImageManifest: true,
-	}
-	manifestDescriptor, err := oras.Pack(ctx, store, fileMediaType, []ocispec.Descriptor{fileDesc}, opts)
+	sig, _, err := signer.Sign(ctx, fileDesc, signerOpts)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("file manifest descriptor to be signed: %+v\n", manifestDescriptor)
-	ref, err := tagWithDigest(manifestDescriptor.Digest.String())
-	if err != nil {
-		return err
-	}
-	if err := store.Tag(ctx, manifestDescriptor, ref); err != nil {
-		return err
-	}
-	signOpts.ArtifactReference = ref
-
-	// core process
-	_, err = notation.Sign(ctx, signer, notationregistry.NewRepository(store), signOpts)
-	if err != nil {
-		var errorPushSignatureFailed notation.ErrorPushSignatureFailed
-		if errors.As(err, &errorPushSignatureFailed) && strings.Contains(err.Error(), referrersTagSchemaDeleteError) {
-			fmt.Fprintln(os.Stderr, "Warning: Removal of outdated referrers index from remote registry failed. Garbage collection may be required.")
-			// write out
-			fmt.Println("Successfully signed", filePath)
-			return nil
-		}
-		return err
-	}
-	fmt.Println("Successfully signed", filePath)
-	if cmdOpts.outputPath != "" {
-		sigOci, err := oci.New(cmdOpts.outputPath)
-		if err != nil {
-			return err
-		}
-		desc, err := oras.ExtendedCopy(ctx, store, ref, sigOci, "", oras.DefaultExtendedCopyOptions)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("Successfully saved target file along with signature to: %s. File descriptor: %+v\n", cmdOpts.outputPath, desc)
-		return nil
-	}
-	sigRepo, err := getOrasRemoteRepository(ctx, &cmdOpts.SecureFlagOpts, cmdOpts.reference, cmdOpts.allowReferrersAPI)
-	if err != nil {
-		return err
-	}
-	desc, err := oras.ExtendedCopy(ctx, store, ref, sigRepo, "", oras.DefaultExtendedCopyOptions)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Successfully saved target file along with signature to: %s@%s\n", cmdOpts.reference, desc.Digest.String())
-	return nil
-}
-
-func getOrasRemoteRepository(ctx context.Context, opts *SecureFlagOpts, reference string, allowReferrersAPI bool) (*remote.Repository, error) {
-	logger := log.GetLogger(ctx)
-	ref, err := registry.ParseReference(reference)
-	if err != nil {
-		return nil, err
-	}
-
-	// generate notation repository
-	remoteRepo, err := getRepositoryClient(ctx, opts, ref)
-	if err != nil {
-		return nil, err
-	}
-
-	if !experimental.IsDisabled() && allowReferrersAPI {
-		logger.Info("Trying to use the referrers API")
-	} else {
-		logger.Info("Using the referrers tag schema")
-		if err := remoteRepo.SetReferrersCapability(false); err != nil {
-			return nil, err
-		}
-	}
-	return remoteRepo, nil
-}
-
-func tagWithDigest(digest string) (string, error) {
-	_, tag, found := strings.Cut(digest, ":")
-	if !found {
-		return "", errors.New("invalid digest")
-	}
-	return tag, nil
+	fmt.Println("Successfully signed", cmdOpts.filePath)
+	return osutil.WriteFile(cmdOpts.outputPath, sig)
 }

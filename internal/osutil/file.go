@@ -19,6 +19,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/opencontainers/go-digest"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // WriteFile writes to a path with all parent directories created.
@@ -93,4 +96,34 @@ func IsRegularFile(path string) (bool, error) {
 	}
 
 	return fileStat.Mode().IsRegular(), nil
+}
+
+// DescriptorFromFile generates a descritpor of a file
+func DescriptorFromFile(path string) (ocispec.Descriptor, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to stat %s: %w", path, err)
+	}
+	if fi.IsDir() {
+		return ocispec.Descriptor{}, fmt.Errorf("%s is a dir. File required", path)
+	}
+	fp, err := os.Open(path)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	defer func() {
+		closeErr := fp.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}()
+	dgst, err := digest.FromReader(fp)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	return ocispec.Descriptor{
+		MediaType: ocispec.MediaTypeImageLayer,
+		Digest:    dgst,
+		Size:      fi.Size(),
+	}, nil
 }

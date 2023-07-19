@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -24,7 +25,9 @@ import (
 	"github.com/notaryproject/notation-go/verifier/trustpolicy"
 	"github.com/notaryproject/notation/cmd/notation/internal/experimental"
 	"github.com/notaryproject/notation/internal/cmd"
+	"github.com/notaryproject/notation/internal/envelope"
 	"github.com/notaryproject/notation/internal/ioutil"
+	"github.com/notaryproject/notation/internal/osutil"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +42,8 @@ type verifyOpts struct {
 	trustPolicyScope     string
 	inputType            inputType
 	maxSignatureAttempts int
+	filePath             string
+	signaturePath        string
 }
 
 func verifyCommand(opts *verifyOpts) *cobra.Command {
@@ -73,6 +78,9 @@ Example - [Experimental] Verify a signature on an OCI artifact identified by a t
 		Long:  longMessage,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
+				if opts.filePath != "" {
+					return nil
+				}
 				return errors.New("missing reference")
 			}
 			opts.reference = args[0]
@@ -99,8 +107,11 @@ Example - [Experimental] Verify a signature on an OCI artifact identified by a t
 	cmd.SetPflagReferrersAPI(command.Flags(), &opts.allowReferrersAPI, fmt.Sprintf(cmd.PflagReferrersUsageFormat, "verify"))
 	command.Flags().BoolVar(&opts.ociLayout, "oci-layout", false, "[Experimental] verify the artifact stored as OCI image layout")
 	command.Flags().StringVar(&opts.trustPolicyScope, "scope", "", "[Experimental] set trust policy scope for artifact verification, required and can only be used when flag \"--oci-layout\" is set")
-	command.MarkFlagsRequiredTogether("oci-layout", "scope")
-	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout", "scope"})
+	//command.MarkFlagsRequiredTogether("oci-layout", "scope")
+	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
+	command.Flags().StringVar(&opts.filePath, "file", "", "path of target file to be verified")
+	command.Flags().StringVar(&opts.signaturePath, "signature", "", "path of signature to be verified")
+	command.MarkFlagsRequiredTogether("file", "signature")
 	return command
 }
 
@@ -126,7 +137,16 @@ func runVerify(command *cobra.Command, opts *verifyOpts) error {
 		return err
 	}
 
-	// core verify process
+	// verify file and signature in file system
+	if opts.filePath != "" {
+		verifierOpts := notation.VerifierVerifyOptions{
+			PluginConfig: configs,
+			UserMetadata: userMetadata,
+		}
+		return verifyFile(ctx, opts, sigVerifier, verifierOpts)
+	}
+
+	// verify OCI artifact in remote registry
 	reference := opts.reference
 	sigRepo, err := getRepository(ctx, opts.inputType, reference, &opts.SecureFlagOpts, opts.allowReferrersAPI)
 	if err != nil {
@@ -196,4 +216,34 @@ func printMetadataIfPresent(outcome *notation.VerificationOutcome) {
 		fmt.Println("\nThe artifact was signed with the following user metadata.")
 		ioutil.PrintMetadataMap(os.Stdout, metadata)
 	}
+}
+
+func verifyFile(ctx context.Context, cmdOpts *verifyOpts, verifier notation.Verifier, verifierOpts notation.VerifierVerifyOptions) error {
+	if cmdOpts.signaturePath == "" {
+		return errors.New("verifing file. signature path cannot be empty")
+	}
+	if cmdOpts.trustPolicyScope == "" {
+		return errors.New("verifing file. trust policy scope cannot be empty")
+	}
+	fileDesc, err := osutil.DescriptorFromFile(cmdOpts.filePath)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("file blob descriptor: %+v\n", fileDesc)
+	verifierOpts.ArtifactReference = cmdOpts.trustPolicyScope + "@" + fileDesc.Digest.String()
+	sigEnvBytes, err := os.ReadFile(cmdOpts.signaturePath)
+	if err != nil {
+		return fmt.Errorf("failed to read in signature file: %w", err)
+	}
+	signatureMediaType, err := envelope.SpeculateSignatureMediaType(sigEnvBytes)
+	if err != nil {
+		return err
+	}
+	verifierOpts.SignatureMediaType = signatureMediaType
+	_, err = verifier.Verify(ctx, fileDesc, sigEnvBytes, verifierOpts)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Successfully verified %s with signature %s\n", cmdOpts.filePath, cmdOpts.signaturePath)
+	return nil
 }

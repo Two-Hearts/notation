@@ -79,3 +79,13 @@ func DescriptorFromSignaturePayload(payload *signature.Payload) (*ocispec.Descri
 
 	return &parsedPayload.TargetArtifact, nil
 }
+
+func SpeculateSignatureMediaType(sig []byte) (string, error) {
+	if _, err := signature.ParseEnvelope(cose.MediaTypeEnvelope, sig); err != nil {
+		if _, err := signature.ParseEnvelope(jws.MediaTypeEnvelope, sig); err != nil {
+			return "", errors.New("unsupported envelope media type")
+		}
+		return jws.MediaTypeEnvelope, nil
+	}
+	return cose.MediaTypeEnvelope, nil
+}
