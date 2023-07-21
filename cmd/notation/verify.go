@@ -42,8 +42,8 @@ type verifyOpts struct {
 	trustPolicyScope     string
 	inputType            inputType
 	maxSignatureAttempts int
-	filePath             string
 	signaturePath        string
+	verifyBlob           bool
 }
 
 func verifyCommand(opts *verifyOpts) *cobra.Command {
@@ -78,9 +78,6 @@ Example - [Experimental] Verify a signature on an OCI artifact identified by a t
 		Long:  longMessage,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if opts.filePath != "" {
-					return nil
-				}
 				return errors.New("missing reference")
 			}
 			opts.reference = args[0]
@@ -109,9 +106,9 @@ Example - [Experimental] Verify a signature on an OCI artifact identified by a t
 	command.Flags().StringVar(&opts.trustPolicyScope, "scope", "", "[Experimental] set trust policy scope for artifact verification, required and can only be used when flag \"--oci-layout\" is set")
 	//command.MarkFlagsRequiredTogether("oci-layout", "scope")
 	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
-	command.Flags().StringVar(&opts.filePath, "file", "", "path of target file to be verified")
 	command.Flags().StringVar(&opts.signaturePath, "signature", "", "path of signature to be verified")
-	command.MarkFlagsRequiredTogether("file", "signature")
+	command.Flags().BoolVar(&opts.verifyBlob, "blob", false, "verify a blob")
+	command.MarkFlagsRequiredTogether("signature", "scope")
 	return command
 }
 
@@ -138,7 +135,7 @@ func runVerify(command *cobra.Command, opts *verifyOpts) error {
 	}
 
 	// verify file and signature in file system
-	if opts.filePath != "" {
+	if opts.signaturePath != "" {
 		verifierOpts := notation.VerifierVerifyOptions{
 			PluginConfig: configs,
 			UserMetadata: userMetadata,
@@ -163,6 +160,7 @@ func runVerify(command *cobra.Command, opts *verifyOpts) error {
 		PluginConfig:         configs,
 		MaxSignatureAttempts: opts.maxSignatureAttempts,
 		UserMetadata:         userMetadata,
+		VerifyFile:           opts.verifyBlob,
 	}
 	_, outcomes, err := notation.Verify(ctx, sigVerifier, sigRepo, verifyOpts)
 	err = checkVerificationFailure(outcomes, resolvedRef, err)
@@ -220,12 +218,12 @@ func printMetadataIfPresent(outcome *notation.VerificationOutcome) {
 
 func verifyFile(ctx context.Context, cmdOpts *verifyOpts, verifier notation.Verifier, verifierOpts notation.VerifierVerifyOptions) error {
 	if cmdOpts.signaturePath == "" {
-		return errors.New("verifing file. signature path cannot be empty")
+		return errors.New("verifing signature in file system. signature path cannot be empty")
 	}
 	if cmdOpts.trustPolicyScope == "" {
-		return errors.New("verifing file. trust policy scope cannot be empty")
+		return errors.New("verifing signature in file system. trust policy scope cannot be empty")
 	}
-	fileDesc, err := osutil.DescriptorFromFile(cmdOpts.filePath)
+	fileDesc, err := osutil.DescriptorFromFile(cmdOpts.reference)
 	if err != nil {
 		return err
 	}
@@ -244,6 +242,6 @@ func verifyFile(ctx context.Context, cmdOpts *verifyOpts, verifier notation.Veri
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Successfully verified %s with signature %s\n", cmdOpts.filePath, cmdOpts.signaturePath)
+	fmt.Printf("Successfully verified %s with signature %s\n", cmdOpts.reference, cmdOpts.signaturePath)
 	return nil
 }
