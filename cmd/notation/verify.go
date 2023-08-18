@@ -181,6 +181,7 @@ func runVerify(command *cobra.Command, opts *verifyOpts) error {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("file blob descriptor to be verified: %+v\n", verifyOpts.FileBlobDescriptor)
 	}
 	_, outcomes, err := notation.Verify(ctx, sigVerifier, sigRepo, verifyOpts)
 	err = checkVerificationFailure(outcomes, resolvedRef, err)
