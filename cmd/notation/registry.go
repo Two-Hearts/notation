@@ -40,22 +40,27 @@ type inputType int
 const (
 	inputTypeRegistry  inputType = 1 + iota // inputType remote registry
 	inputTypeOCILayout                      // inputType oci-layout
+	inputTypeFile                           // inputType file
 )
 
 // getRepository returns a notationregistry.Repository given user input
 // type and user input reference
-func getRepository(ctx context.Context, inputType inputType, reference string, opts *SecureFlagOpts, allowReferrersAPI bool) (notationregistry.Repository, error) {
+func getRepository(ctx context.Context, inputType inputType, reference string, opts *SecureFlagOpts, allowReferrersAPI bool) (notationregistry.Repository, *remote.Repository, error) {
 	switch inputType {
-	case inputTypeRegistry:
+	case inputTypeRegistry, inputTypeFile:
 		return getRemoteRepository(ctx, opts, reference, allowReferrersAPI)
 	case inputTypeOCILayout:
 		layoutPath, _, err := parseOCILayoutReference(reference)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return notationregistry.NewOCIRepository(layoutPath, notationregistry.RepositoryOptions{})
+		repo, err := notationregistry.NewOCIRepository(layoutPath, notationregistry.RepositoryOptions{})
+		if err != nil {
+			return nil, nil, err
+		}
+		return repo, nil, nil
 	default:
-		return nil, errors.New("unsupported input type")
+		return nil, nil, errors.New("unsupported input type")
 	}
 }
 
@@ -70,17 +75,17 @@ func getRepository(ctx context.Context, inputType inputType, reference string, o
 // References:
 // https://github.com/opencontainers/distribution-spec/blob/v1.1.0-rc1/spec.md#listing-referrers
 // https://github.com/opencontainers/distribution-spec/blob/v1.1.0-rc1/spec.md#referrers-tag-schema
-func getRemoteRepository(ctx context.Context, opts *SecureFlagOpts, reference string, allowReferrersAPI bool) (notationregistry.Repository, error) {
+func getRemoteRepository(ctx context.Context, opts *SecureFlagOpts, reference string, allowReferrersAPI bool) (notationregistry.Repository, *remote.Repository, error) {
 	logger := log.GetLogger(ctx)
 	ref, err := registry.ParseReference(reference)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// generate notation repository
 	remoteRepo, err := getRepositoryClient(ctx, opts, ref)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if !experimental.IsDisabled() && allowReferrersAPI {
@@ -88,10 +93,10 @@ func getRemoteRepository(ctx context.Context, opts *SecureFlagOpts, reference st
 	} else {
 		logger.Info("Using the referrers tag schema")
 		if err := remoteRepo.SetReferrersCapability(false); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return notationregistry.NewRepository(remoteRepo), nil
+	return notationregistry.NewRepository(remoteRepo), remoteRepo, nil
 }
 
 func getRepositoryClient(ctx context.Context, opts *SecureFlagOpts, ref registry.Reference) (*remote.Repository, error) {

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -43,8 +44,8 @@ type signOpts struct {
 	allowReferrersAPI bool
 	ociLayout         bool
 	inputType         inputType
-	filePath          string
-	outputPath        string
+	signFile          bool
+	signaturePath     string
 }
 
 func signCommand(opts *signOpts) *cobra.Command {
@@ -92,8 +93,8 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 		Long:  longMessage,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				if opts.filePath != "" {
-					return nil
+				if opts.signFile {
+					return errors.New("missing file path")
 				}
 				return errors.New("missing reference")
 			}
@@ -120,9 +121,9 @@ Example - [Experimental] Sign an OCI artifact identified by a tag and referenced
 	command.Flags().BoolVar(&opts.ociLayout, "oci-layout", false, "[Experimental] sign the artifact stored as OCI image layout")
 	command.MarkFlagsMutuallyExclusive("oci-layout", "allow-referrers-api")
 	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
-	command.Flags().StringVar(&opts.filePath, "file", "", "path of target file to be signed")
-	command.Flags().StringVar(&opts.outputPath, "output", "", "output path of signature")
-	command.MarkFlagsRequiredTogether("file", "output")
+	command.Flags().BoolVar(&opts.signFile, "file", false, "enable signing a file located in file system, if set, the reference argument is the file path (required if --signature is set)")
+	command.Flags().StringVar(&opts.signaturePath, "signature", "", "output path of generated signature when signing a file (required if --file is set)")
+	command.MarkFlagsRequiredTogether("file", "signature")
 	return command
 }
 
@@ -139,13 +140,13 @@ func runSign(command *cobra.Command, cmdOpts *signOpts) error {
 	if err != nil {
 		return err
 	}
-	if cmdOpts.filePath != "" {
+	if cmdOpts.signFile {
 		return signFile(ctx, cmdOpts, signer, signOpts.SignerSignOptions)
 	}
 	if cmdOpts.allowReferrersAPI {
 		fmt.Fprintln(os.Stderr, "Warning: using the Referrers API to store signature. On success, must set the `--allow-referrers-api` flag to list, inspect, and verify the signature.")
 	}
-	sigRepo, err := getRepository(ctx, cmdOpts.inputType, cmdOpts.reference, &cmdOpts.SecureFlagOpts, cmdOpts.allowReferrersAPI)
+	sigRepo, _, err := getRepository(ctx, cmdOpts.inputType, cmdOpts.reference, &cmdOpts.SecureFlagOpts, cmdOpts.allowReferrersAPI)
 	if err != nil {
 		return err
 	}
@@ -198,18 +199,25 @@ func prepareSigningOpts(ctx context.Context, opts *signOpts) (notation.SignOptio
 }
 
 func signFile(ctx context.Context, cmdOpts *signOpts, signer notation.Signer, signerOpts notation.SignerSignOptions) error {
-	if cmdOpts.outputPath == "" {
-		return errors.New("signing file, output path cannot be empty")
+	if cmdOpts.signaturePath == "" {
+		return errors.New("signing file, output signature path cannot be empty")
 	}
-	fileDesc, err := osutil.DescriptorFromFile(cmdOpts.filePath)
+	fileDescToBeSigned, err := osutil.DescriptorFromFile(cmdOpts.reference)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("file blob descriptor: %+v\n", fileDesc)
-	sig, _, err := signer.Sign(ctx, fileDesc, signerOpts)
+	fmt.Printf("file blob descriptor to be signed: %+v\n", fileDescToBeSigned)
+	sig, _, err := signer.Sign(ctx, fileDescToBeSigned, signerOpts)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Successfully signed", cmdOpts.filePath)
-	return osutil.WriteFile(cmdOpts.outputPath, sig)
+	fullSignaturePath, err := filepath.Abs(cmdOpts.signaturePath)
+	if err != nil {
+		return err
+	}
+	if err := osutil.WriteFile(fullSignaturePath, sig); err != nil {
+		return err
+	}
+	fmt.Printf("Successfully signed %s, stored signature at %s\n", cmdOpts.reference, fullSignaturePath)
+	return nil
 }

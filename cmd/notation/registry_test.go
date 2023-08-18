@@ -49,7 +49,7 @@ func TestRegistry_getRemoteRepositoryWithReferrersAPISupported(t *testing.T) {
 	secureOpts := SecureFlagOpts{
 		InsecureRegistry: true,
 	}
-	_, err = getRemoteRepository(context.Background(), &secureOpts, uri.Host+"/test", true)
+	_, _, err = getRemoteRepository(context.Background(), &secureOpts, uri.Host+"/test", true)
 	if err != nil {
 		t.Errorf("getRemoteRepository() expected nil error, but got error: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestRegistry_getRemoteRepositoryWithReferrersAPINotSupported(t *testing.T) 
 	secureOpts := SecureFlagOpts{
 		InsecureRegistry: true,
 	}
-	_, err = getRemoteRepository(context.Background(), &secureOpts, uri.Host+"/test", true)
+	_, _, err = getRemoteRepository(context.Background(), &secureOpts, uri.Host+"/test", true)
 	if err != nil {
 		t.Errorf("getRemoteRepository() expected nil error, but got error: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestRegistry_getRemoteRepositoryWithReferrersTagSchema(t *testing.T) {
 	secureOpts := SecureFlagOpts{
 		InsecureRegistry: true,
 	}
-	_, err = getRemoteRepository(context.Background(), &secureOpts, uri.Host+"/test", false)
+	_, _, err = getRemoteRepository(context.Background(), &secureOpts, uri.Host+"/test", false)
 	if err != nil {
 		t.Errorf("getRemoteRepository() expected nil error, but got error: %v", err)
 	}

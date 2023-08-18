@@ -83,7 +83,7 @@ func runList(ctx context.Context, opts *listOpts) error {
 
 	// initialize
 	reference := opts.reference
-	sigRepo, err := getRepository(ctx, opts.inputType, reference, &opts.SecureFlagOpts, opts.allowReferrersAPI)
+	sigRepo, _, err := getRepository(ctx, opts.inputType, reference, &opts.SecureFlagOpts, opts.allowReferrersAPI)
 	if err != nil {
 		return err
 	}

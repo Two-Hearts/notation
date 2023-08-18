@@ -15,6 +15,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -26,7 +27,13 @@ import (
 	notationerrors "github.com/notaryproject/notation/cmd/notation/internal/errors"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry"
+)
+
+const (
+	maxBlobSizeLimit     = 32 * 1024 * 1024 // 32 MiB
+	maxManifestSizeLimit = 4 * 1024 * 1024  // 4 MiB
 )
 
 func resolveReferenceWithWarning(ctx context.Context, inputType inputType, reference string, sigRepo notationregistry.Repository, operation string) (ocispec.Descriptor, string, error) {
@@ -45,7 +52,7 @@ func resolveReference(ctx context.Context, inputType inputType, reference string
 	var tagOrDigestRef string
 	var resolvedRef string
 	switch inputType {
-	case inputTypeRegistry:
+	case inputTypeRegistry, inputTypeFile:
 		ref, err := registry.ParseReference(reference)
 		if err != nil {
 			return ocispec.Descriptor{}, "", fmt.Errorf("failed to resolve user input reference: %w", err)
@@ -141,4 +148,34 @@ func getManifestDescriptor(ctx context.Context, reference string, sigRepo notati
 	}
 	logger.Infof("Reference %s resolved to manifest descriptor: %+v", reference, manifestDesc)
 	return manifestDesc, nil
+}
+
+// getBlobDescFromFileManifest gets file blob descriptor given file manifest
+// descritptor and repository
+func getBlobDescFromFileManifest(ctx context.Context, fileManifestDesc ocispec.Descriptor, repo registry.Repository) (ocispec.Descriptor, error) {
+	if fileManifestDesc.MediaType != ocispec.MediaTypeImageManifest {
+		return ocispec.Descriptor{}, fmt.Errorf("fileManifestDesc.MediaType requires %q, got %q", ocispec.MediaTypeImageManifest, fileManifestDesc.MediaType)
+	}
+	if fileManifestDesc.Size > maxManifestSizeLimit {
+		return ocispec.Descriptor{}, fmt.Errorf("file manifest too large: %d bytes", fileManifestDesc.Size)
+	}
+
+	// get the file manifest from fileManifestDesc
+	manifestJSON, err := content.FetchAll(ctx, repo.Manifests(), fileManifestDesc)
+	if err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
+	// get the file blob descriptor from fileManifestDesc
+	var fileBlobs []ocispec.Descriptor
+	var fileManifest ocispec.Manifest
+	if err := json.Unmarshal(manifestJSON, &fileManifest); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+	fileBlobs = fileManifest.Layers
+	if len(fileBlobs) != 1 {
+		return ocispec.Descriptor{}, fmt.Errorf("file manifest requries exactly one blob, got %d", len(fileBlobs))
+	}
+
+	return fileBlobs[0], nil
 }

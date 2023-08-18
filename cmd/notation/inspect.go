@@ -129,7 +129,7 @@ func runInspect(command *cobra.Command, opts *inspectOpts) error {
 
 	// initialize
 	reference := opts.reference
-	sigRepo, err := getRemoteRepository(ctx, &opts.SecureFlagOpts, reference, opts.allowReferrersAPI)
+	sigRepo, _, err := getRemoteRepository(ctx, &opts.SecureFlagOpts, reference, opts.allowReferrersAPI)
 	if err != nil {
 		return err
 	}
