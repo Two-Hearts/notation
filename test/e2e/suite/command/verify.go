@@ -121,7 +121,7 @@ var _ = Describe("notation verify", func() {
 				MatchKeyWords(SignSuccessfully)
 
 			experimentalMsg := "Warning: This feature is experimental and may not be fully tested or completed and may be deprecated. Report any issues to \"https://github/notaryproject/notation\"\n"
-			expectedErrMsg := "Error: if any flags in the group [oci-layout scope] are set they must all be set; missing [scope]"
+			expectedErrMsg := "Error: '--oci-layout' is set, '--scope' is required"
 			notation.ExpectFailure().Exec("verify", "--oci-layout", ociLayout.ReferenceWithDigest()).
 				MatchErrKeyWords(experimentalMsg).
 				MatchErrKeyWords(expectedErrMsg)

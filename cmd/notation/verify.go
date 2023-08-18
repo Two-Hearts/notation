@@ -103,6 +103,9 @@ Example - [Experimental] Verify a signature on an OCI artifact identified by a t
 			if opts.maxSignatureAttempts <= 0 {
 				return fmt.Errorf("max-signatures value %d must be a positive number", opts.maxSignatureAttempts)
 			}
+			if opts.ociLayout && opts.trustPolicyScope == "" {
+				return errors.New("'--oci-layout' is set, '--scope' is required")
+			}
 			if opts.signaturePathArray != nil && !opts.verifyFile {
 				return errors.New("'--signature' is set, '--file' is required")
 			}
@@ -116,8 +119,7 @@ Example - [Experimental] Verify a signature on an OCI artifact identified by a t
 	command.Flags().IntVar(&opts.maxSignatureAttempts, "max-signatures", 100, "maximum number of signatures to evaluate or examine")
 	cmd.SetPflagReferrersAPI(command.Flags(), &opts.allowReferrersAPI, fmt.Sprintf(cmd.PflagReferrersUsageFormat, "verify"))
 	command.Flags().BoolVar(&opts.ociLayout, "oci-layout", false, "[Experimental] verify the artifact stored as OCI image layout")
-	command.Flags().StringVar(&opts.trustPolicyScope, "scope", "", "[Experimental] set trust policy scope for artifact verification, required and can only be used when flag \"--oci-layout\" is set")
-	//command.MarkFlagsRequiredTogether("oci-layout", "scope")
+	command.Flags().StringVar(&opts.trustPolicyScope, "scope", "", "[Experimental] set trust policy scope for artifact verification, required when flag \"--oci-layout\" is set, can only be used when \"--oci-layout\" or \"--file\" is set")
 	experimental.HideFlags(command, experimentalExamples, []string{"allow-referrers-api", "oci-layout"})
 	command.Flags().BoolVar(&opts.verifyFile, "file", false, "enable verifying a file, if set, the reference argument is the file path or full URI reference of the file artifact in registry (required if --signature is set)")
 	command.Flags().StringArrayVar(&opts.signaturePathArray, "signature", nil, "path of signatures when verifying a file, required and used if and only if the target file is stored in file system")
