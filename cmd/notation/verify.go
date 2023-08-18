@@ -177,6 +177,7 @@ func runVerify(command *cobra.Command, opts *verifyOpts) error {
 		VerifyFile:           opts.verifyFile,
 	}
 	if opts.verifyFile {
+		fmt.Println("verifying a file")
 		verifyOpts.FileBlobDescriptor, err = getBlobDescFromFileManifest(ctx, manifestDesc, repoClient)
 		if err != nil {
 			return err
