@@ -53,7 +53,7 @@ func certGenerateTestCommand(opts *certGenerateTestOpts) *cobra.Command {
 	}
 	command := &cobra.Command{
 		Use:   "generate-test [flags] <common_name>",
-		Short: "Generate a test RSA key and a corresponding self-signed certificate.",
+		Short: "Generate a test RSA key and a corresponding self-signed certificate. Use it only for testing purposes.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New("missing certificate common_name")

@@ -46,7 +46,7 @@ Aliases:
 Available Commands:
   add           Add certificates to the trust store.
   delete        Delete certificates from the trust store.
-  generate-test Generate a test RSA key and a corresponding self-signed certificate.
+  generate-test Generate a test RSA key and a corresponding self-signed certificate. Use it only for testing purposes.
   list          List certificates in the trust store.
   show          Show certificate details given trust store type, named store, and certificate file name. If the certificate file contains multiple certificates, then all certificates are displayed.
 

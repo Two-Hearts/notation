@@ -105,4 +105,47 @@ var _ = Describe("notation cert", func() {
 				)
 		})
 	})
+
+	It("cleanup test", func() {
+		Host(BaseOptions(), func(notation *utils.ExecOpts, artifact *Artifact, vhost *utils.VirtualHost) {
+			notation.Exec("cert", "generate-test", "e2e", "--default").
+				MatchKeyWords(
+					"generating RSA Key with 2048 bits",
+					"generated certificate expiring on",
+					"wrote key:", "e2e.key",
+					"wrote certificate:", "e2e.crt",
+					"Successfully added e2e.crt to named store e2e of type ca",
+					"e2e: added to the key list",
+				)
+
+			notation.Exec("cert", "cleanup-test", "e2e").
+				MatchKeyWords(
+					"Successfully deleted e2e.key and e2e.crt",
+					"Successfully removed \"e2e\" from signingkeys.json",
+					"Successfully deleted e2e.crt",
+				)
+		})
+	})
+
+	It("cleanup test set as default", func() {
+		Host(BaseOptions(), func(notation *utils.ExecOpts, artifact *Artifact, vhost *utils.VirtualHost) {
+			notation.Exec("cert", "generate-test", "e2e", "--default").
+				MatchKeyWords(
+					"generating RSA Key with 2048 bits",
+					"generated certificate expiring on",
+					"wrote key:", "e2e.key",
+					"wrote certificate:", "e2e.crt",
+					"Successfully added e2e.crt to named store e2e of type ca",
+					"e2e: added to the key list",
+					"e2e: mark as default signing key",
+				)
+
+			notation.Exec("cert", "cleanup-test", "e2e").
+				MatchKeyWords(
+					"Successfully deleted e2e.key and e2e.crt",
+					"Successfully removed \"e2e\" from signingkeys.json",
+					"Successfully deleted e2e.crt",
+				)
+		})
+	})
 })
