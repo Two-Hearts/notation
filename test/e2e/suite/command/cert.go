@@ -112,17 +112,17 @@ var _ = Describe("notation cert", func() {
 				MatchKeyWords(
 					"generating RSA Key with 2048 bits",
 					"generated certificate expiring on",
-					"wrote key:", "e2e.key",
-					"wrote certificate:", "e2e.crt",
-					"Successfully added e2e.crt to named store e2e of type ca",
-					"e2e: added to the key list",
+					"wrote key:", "e2e-test.key",
+					"wrote certificate:", "e2e-test.crt",
+					"Successfully added e2e-test.crt to named store e2e-test of type ca",
+					"e2e-test: added to the key list",
 				)
 
 			notation.Exec("cert", "cleanup-test", "e2e-test").
 				MatchKeyWords(
-					"Successfully deleted e2e.key and e2e.crt",
-					"Successfully removed \"e2e\" from signingkeys.json",
-					"Successfully deleted e2e.crt",
+					"Successfully deleted e2e-test.key and e2e-test.crt",
+					"Successfully removed \"e2e-test\" from signingkeys.json",
+					"Successfully deleted e2e-test.crt",
 				)
 		})
 	})
@@ -133,18 +133,18 @@ var _ = Describe("notation cert", func() {
 				MatchKeyWords(
 					"generating RSA Key with 2048 bits",
 					"generated certificate expiring on",
-					"wrote key:", "e2e.key",
-					"wrote certificate:", "e2e.crt",
-					"Successfully added e2e.crt to named store e2e of type ca",
-					"e2e: added to the key list",
-					"e2e: mark as default signing key",
+					"wrote key:", "e2e-test.key",
+					"wrote certificate:", "e2e-test.crt",
+					"Successfully added e2e-test.crt to named store e2e-test of type ca",
+					"e2e-test: added to the key list",
+					"e2e-test: mark as default signing key",
 				)
 
 			notation.Exec("cert", "cleanup-test", "e2e-test").
 				MatchKeyWords(
-					"Successfully deleted e2e.key and e2e.crt",
-					"Successfully removed \"e2e\" from signingkeys.json",
-					"Successfully deleted e2e.crt",
+					"Successfully deleted e2e-test.key and e2e-test.crt",
+					"Successfully removed \"e2e-test\" from signingkeys.json",
+					"Successfully deleted e2e-test.crt",
 				)
 		})
 	})
