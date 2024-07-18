@@ -35,7 +35,7 @@ func certCleanupTestCommand(opts *certCleanupTestOpts) *cobra.Command {
 	}
 	command := &cobra.Command{
 		Use:   "cleanup-test [flags] <common_name>",
-		Short: "Clean up the test key and corresponding certificate. Use it only for testing purposes.",
+		Short: "Clean up the test key and corresponding certificate created by the 'generated-test' command. Use it only for testing purposes.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New("missing certificate common_name")
@@ -43,7 +43,7 @@ func certCleanupTestCommand(opts *certCleanupTestOpts) *cobra.Command {
 			opts.name = args[0]
 			return nil
 		},
-		Long: `Clean up the test key and corresponding certificate
+		Long: `Clean up the test key and corresponding certificate created by the 'generated-test' command. Use it only for testing purposes.
 
 Example - Clean up a test key and corresponding certificate named "wabbit-networks.io":
   notation cert cleanup-test "wabbit-networks.io"

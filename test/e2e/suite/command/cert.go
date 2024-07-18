@@ -108,7 +108,7 @@ var _ = Describe("notation cert", func() {
 
 	It("cleanup test", func() {
 		Host(BaseOptions(), func(notation *utils.ExecOpts, artifact *Artifact, vhost *utils.VirtualHost) {
-			notation.Exec("cert", "generate-test", "e2e", "--default").
+			notation.Exec("cert", "generate-test", "e2e-test", "--default").
 				MatchKeyWords(
 					"generating RSA Key with 2048 bits",
 					"generated certificate expiring on",
@@ -118,7 +118,7 @@ var _ = Describe("notation cert", func() {
 					"e2e: added to the key list",
 				)
 
-			notation.Exec("cert", "cleanup-test", "e2e").
+			notation.Exec("cert", "cleanup-test", "e2e-test").
 				MatchKeyWords(
 					"Successfully deleted e2e.key and e2e.crt",
 					"Successfully removed \"e2e\" from signingkeys.json",
@@ -129,7 +129,7 @@ var _ = Describe("notation cert", func() {
 
 	It("cleanup test set as default", func() {
 		Host(BaseOptions(), func(notation *utils.ExecOpts, artifact *Artifact, vhost *utils.VirtualHost) {
-			notation.Exec("cert", "generate-test", "e2e", "--default").
+			notation.Exec("cert", "generate-test", "e2e-test", "--default").
 				MatchKeyWords(
 					"generating RSA Key with 2048 bits",
 					"generated certificate expiring on",
@@ -140,7 +140,7 @@ var _ = Describe("notation cert", func() {
 					"e2e: mark as default signing key",
 				)
 
-			notation.Exec("cert", "cleanup-test", "e2e").
+			notation.Exec("cert", "cleanup-test", "e2e-test").
 				MatchKeyWords(
 					"Successfully deleted e2e.key and e2e.crt",
 					"Successfully removed \"e2e\" from signingkeys.json",

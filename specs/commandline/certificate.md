@@ -45,6 +45,7 @@ Aliases:
 
 Available Commands:
   add           Add certificates to the trust store.
+  cleanup-test  Clean up the test key and corresponding certificate created by the 'generated-test' command. Use it only for testing purposes.
   delete        Delete certificates from the trust store.
   generate-test Generate a test RSA key and a corresponding self-signed certificate. Use it only for testing purposes.
   list          List certificates in the trust store.
@@ -122,7 +123,7 @@ Flags:
 ### notation certificate generate-test
 
 ```text
-Generate a test RSA key and a corresponding self-signed certificate.
+Generate a test RSA key and a corresponding self-signed certificate. Use it only for testing purposes.
 
 Usage:
   notation certificate generate-test [flags] <common_name>
@@ -131,6 +132,18 @@ Flags:
   -b, --bits int   RSA key bits (default 2048)
       --default    mark as default signing key
   -h, --help       help for generate-test
+```
+
+### notation certificate cleanup-test
+
+```text
+Clean up the test key and corresponding certificate created by the 'generated-test' command. Use it only for testing purposes.
+
+Usage:
+  notation certificate cleanup-test [flags] <common_name>
+
+Flags:
+  -h, --help       help for cleanup-test
 ```
 
 ## Usage
@@ -234,4 +247,12 @@ Error: required flag(s) "store", "type" not set
 notation certificate generate-test "wabbit-networks.io"
 ```
 
-Upon successful execution, a local key file and certificate file named `wabbit-networks.io` are generated and stored in `$XDG_CONFIG_HOME/notation/localkeys/`. `wabbit-networks.io` is also used as certificate subject.CommonName.
+Upon successful execution, a local key file and certificate file named `wabbit-networks.io` are generated and stored in `$XDG_CONFIG_HOME/notation/localkeys/`. `wabbit-networks.io` is also used as certificate subject.CommonName. The key is added into user's signingkeys.json. The certificate is added into user's trust store.
+
+### Clean up the key and certificate generated above
+
+```bash
+notation certificate cleanup-test "wabbit-networks.io"
+```
+
+Upon successful execution, the local key and certificate file named `wabbit-networks.io` are deleted from `$XDG_CONFIG_HOME/notation/localkeys/`. The key is removed from user's signingkeys.json. The certificate is deleted from user's trust store.
