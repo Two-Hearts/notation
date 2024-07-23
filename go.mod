@@ -3,15 +3,15 @@ module github.com/notaryproject/notation
 go 1.22
 
 require (
-	github.com/notaryproject/notation-core-go v1.0.4-0.20240716001320-f45197cbd53b
-	github.com/notaryproject/notation-go v1.1.1-0.20240719045753-83409204754a
+	github.com/notaryproject/notation-core-go v1.1.0-beta.1
+	github.com/notaryproject/notation-go v1.2.0-beta.1
 	github.com/notaryproject/tspclient-go v0.1.1-0.20240715235637-df25ef8d2172
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/net v0.22.0
+	golang.org/x/net v0.23.0
 	golang.org/x/term v0.22.0
 	oras.land/oras-go/v2 v2.5.0
 )
