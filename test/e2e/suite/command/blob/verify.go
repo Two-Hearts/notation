@@ -122,7 +122,7 @@ var _ = Describe("notation blob verify", func() {
 	})
 
 	// Failure cases
-	It("with missing --signature flag", func() {
+	It("with missing --signature and --reference flag", func() {
 		HostWithBlob(BaseBlobOptions(), func(notation *utils.ExecOpts, blobPath string, vhost *utils.VirtualHost) {
 			workDir := vhost.AbsolutePath()
 			notation.WithWorkDir(workDir).Exec("blob", "sign", blobPath).
@@ -130,7 +130,7 @@ var _ = Describe("notation blob verify", func() {
 				MatchKeyWords("Signature file written to")
 
 			notation.ExpectFailure().Exec("blob", "verify", blobPath).
-				MatchErrKeyWords("filepath of the signature cannot be empty")
+				MatchErrKeyWords(`at least one of the flags in the group [reference signature] is required`)
 		})
 	})
 
