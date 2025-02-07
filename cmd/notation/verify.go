@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/notaryproject/notation-go"
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	"github.com/notaryproject/notation/cmd/notation/internal/experimental"
 	"github.com/notaryproject/notation/internal/cmd"
 	"github.com/notaryproject/notation/internal/ioutil"
@@ -27,7 +28,7 @@ import (
 
 type verifyOpts struct {
 	cmd.LoggingFlagOpts
-	SecureFlagOpts
+	cmdutil.SecureFlagOpts
 	reference            string
 	pluginConfig         []string
 	userMetadata         []string

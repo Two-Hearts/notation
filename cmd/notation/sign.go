@@ -25,6 +25,7 @@ import (
 	"github.com/notaryproject/notation-core-go/revocation/purpose"
 	"github.com/notaryproject/notation-go"
 	"github.com/notaryproject/notation-go/log"
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	"github.com/notaryproject/notation/cmd/notation/internal/experimental"
 	"github.com/notaryproject/notation/internal/cmd"
 	"github.com/notaryproject/notation/internal/envelope"
@@ -45,7 +46,7 @@ const timestampingTimeout = 15 * time.Second
 type signOpts struct {
 	cmd.LoggingFlagOpts
 	cmd.SignerFlagOpts
-	SecureFlagOpts
+	cmdutil.SecureFlagOpts
 	expiry                 time.Duration
 	pluginConfig           []string
 	userMetadata           []string

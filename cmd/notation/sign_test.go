@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	"github.com/notaryproject/notation/internal/cmd"
 	"github.com/notaryproject/notation/internal/envelope"
 )
@@ -28,7 +29,7 @@ func TestSignCommand_BasicArgs(t *testing.T) {
 	command := signCommand(opts)
 	expected := &signOpts{
 		reference: "ref",
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Username: "user",
 			Password: "password",
 		},
@@ -40,8 +41,8 @@ func TestSignCommand_BasicArgs(t *testing.T) {
 	}
 	if err := command.ParseFlags([]string{
 		expected.reference,
-		"-u", expected.Username,
-		"--password", expected.Password,
+		"-u", expected.SecureFlagOpts.Username,
+		"--password", expected.SecureFlagOpts.Password,
 		"--key", expected.Key}); err != nil {
 		t.Fatalf("Parse Flag failed: %v", err)
 	}
@@ -58,7 +59,7 @@ func TestSignCommand_MoreArgs(t *testing.T) {
 	command := signCommand(opts)
 	expected := &signOpts{
 		reference: "ref",
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Username:         "user",
 			Password:         "password",
 			InsecureRegistry: true,
@@ -72,8 +73,8 @@ func TestSignCommand_MoreArgs(t *testing.T) {
 	}
 	if err := command.ParseFlags([]string{
 		expected.reference,
-		"-u", expected.Username,
-		"-p", expected.Password,
+		"-u", expected.SecureFlagOpts.Username,
+		"-p", expected.SecureFlagOpts.Password,
 		"--key", expected.Key,
 		"--insecure-registry",
 		"--signature-format", expected.SignerFlagOpts.SignatureFormat,
@@ -144,7 +145,7 @@ func TestSignCommmand_OnDemandKeyOptions(t *testing.T) {
 	command := signCommand(opts)
 	expected := &signOpts{
 		reference: "ref",
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Username: "user",
 			Password: "password",
 		},
@@ -156,8 +157,8 @@ func TestSignCommmand_OnDemandKeyOptions(t *testing.T) {
 	}
 	if err := command.ParseFlags([]string{
 		expected.reference,
-		"-u", expected.Username,
-		"--password", expected.Password,
+		"-u", expected.SecureFlagOpts.Username,
+		"--password", expected.SecureFlagOpts.Password,
 		"--id", expected.KeyID,
 		"--plugin", expected.PluginName,
 		"--force-referrers-tag=false",
@@ -178,7 +179,7 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		command := signCommand(opts)
 		expected := &signOpts{
 			reference: "ref",
-			SecureFlagOpts: SecureFlagOpts{
+			SecureFlagOpts: cmdutil.SecureFlagOpts{
 				Username: "user",
 				Password: "password",
 			},
@@ -191,8 +192,8 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		}
 		if err := command.ParseFlags([]string{
 			expected.reference,
-			"-u", expected.Username,
-			"--password", expected.Password,
+			"-u", expected.SecureFlagOpts.Username,
+			"--password", expected.SecureFlagOpts.Password,
 			"--id", expected.KeyID,
 			"--plugin", expected.PluginName,
 			"--key", expected.Key,
@@ -216,7 +217,7 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		command := signCommand(opts)
 		expected := &signOpts{
 			reference: "ref",
-			SecureFlagOpts: SecureFlagOpts{
+			SecureFlagOpts: cmdutil.SecureFlagOpts{
 				Username: "user",
 				Password: "password",
 			},
@@ -228,8 +229,8 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		}
 		if err := command.ParseFlags([]string{
 			expected.reference,
-			"-u", expected.Username,
-			"--password", expected.Password,
+			"-u", expected.SecureFlagOpts.Username,
+			"--password", expected.SecureFlagOpts.Password,
 			"--id", expected.KeyID,
 			"--key", expected.Key,
 			"--force-referrers-tag=false",
@@ -252,7 +253,7 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		command := signCommand(opts)
 		expected := &signOpts{
 			reference: "ref",
-			SecureFlagOpts: SecureFlagOpts{
+			SecureFlagOpts: cmdutil.SecureFlagOpts{
 				Username: "user",
 				Password: "password",
 			},
@@ -264,8 +265,8 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		}
 		if err := command.ParseFlags([]string{
 			expected.reference,
-			"-u", expected.Username,
-			"--password", expected.Password,
+			"-u", expected.SecureFlagOpts.Username,
+			"--password", expected.SecureFlagOpts.Password,
 			"--plugin", expected.PluginName,
 			"--key", expected.Key,
 			"--force-referrers-tag=false",
@@ -288,7 +289,7 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		command := signCommand(opts)
 		expected := &signOpts{
 			reference: "ref",
-			SecureFlagOpts: SecureFlagOpts{
+			SecureFlagOpts: cmdutil.SecureFlagOpts{
 				Username: "user",
 				Password: "password",
 			},
@@ -299,8 +300,8 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		}
 		if err := command.ParseFlags([]string{
 			expected.reference,
-			"-u", expected.Username,
-			"--password", expected.Password,
+			"-u", expected.SecureFlagOpts.Username,
+			"--password", expected.SecureFlagOpts.Password,
 			"--id", expected.KeyID,
 			"--force-referrers-tag=false",
 		}); err != nil {
@@ -322,7 +323,7 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		command := signCommand(opts)
 		expected := &signOpts{
 			reference: "ref",
-			SecureFlagOpts: SecureFlagOpts{
+			SecureFlagOpts: cmdutil.SecureFlagOpts{
 				Username: "user",
 				Password: "password",
 			},
@@ -333,8 +334,8 @@ func TestSignCommmand_OnDemandKeyBadOptions(t *testing.T) {
 		}
 		if err := command.ParseFlags([]string{
 			expected.reference,
-			"-u", expected.Username,
-			"--password", expected.Password,
+			"-u", expected.SecureFlagOpts.Username,
+			"--password", expected.SecureFlagOpts.Password,
 			"--plugin", expected.PluginName,
 			"--force-referrers-tag=false",
 		}); err != nil {

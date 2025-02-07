@@ -16,14 +16,16 @@ package main
 import (
 	"os"
 	"testing"
+
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 )
 
 func TestLoginCommand_PasswordFromArgs(t *testing.T) {
-	t.Setenv(defaultUsernameEnv, "user")
+	t.Setenv(cmdutil.DefaultUsernameEnv, "user")
 	opts := &loginOpts{}
 	cmd := loginCommand(opts)
 	expected := &loginOpts{
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Username: "user",
 			Password: "password",
 		},
@@ -31,8 +33,8 @@ func TestLoginCommand_PasswordFromArgs(t *testing.T) {
 	}
 	if err := cmd.ParseFlags([]string{
 		expected.server,
-		"-u", expected.Username,
-		"-p", expected.Password,
+		"-u", expected.SecureFlagOpts.Username,
+		"-p", expected.SecureFlagOpts.Password,
 	}); err != nil {
 		t.Fatalf("Parse Flag failed: %v", err)
 	}
@@ -48,12 +50,12 @@ func TestLoginCommand_PasswordFromArgs(t *testing.T) {
 }
 
 func TestLogin_PasswordFromStdin(t *testing.T) {
-	t.Setenv(defaultUsernameEnv, "user")
+	t.Setenv(cmdutil.DefaultUsernameEnv, "user")
 	opts := &loginOpts{}
 	cmd := loginCommand(opts)
 	expected := &loginOpts{
 		passwordStdin: true,
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Username: "user",
 			Password: "password",
 		},
@@ -62,8 +64,8 @@ func TestLogin_PasswordFromStdin(t *testing.T) {
 	if err := cmd.ParseFlags([]string{
 		expected.server,
 		"--password-stdin",
-		"-u", expected.Username,
-		"-p", expected.Password,
+		"-u", expected.SecureFlagOpts.Username,
+		"-p", expected.SecureFlagOpts.Password,
 	}); err != nil {
 		t.Fatalf("Parse Flag failed: %v", err)
 	}

@@ -20,6 +20,7 @@ import (
 	"os"
 
 	notationregistry "github.com/notaryproject/notation-go/registry"
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	cmderr "github.com/notaryproject/notation/cmd/notation/internal/errors"
 	"github.com/notaryproject/notation/cmd/notation/internal/experimental"
 	"github.com/notaryproject/notation/internal/cmd"
@@ -30,7 +31,7 @@ import (
 
 type listOpts struct {
 	cmd.LoggingFlagOpts
-	SecureFlagOpts
+	cmdutil.SecureFlagOpts
 	reference         string
 	allowReferrersAPI bool
 	ociLayout         bool

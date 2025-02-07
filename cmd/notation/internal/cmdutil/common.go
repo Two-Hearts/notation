@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package cmdutil
 
 import (
 	"os"
@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	defaultUsernameEnv = "NOTATION_USERNAME"
-	defaultPasswordEnv = "NOTATION_PASSWORD"
-	defaultMediaType   = "application/vnd.docker.distribution.manifest.v2+json"
+	DefaultUsernameEnv = "NOTATION_USERNAME"
+	DefaultPasswordEnv = "NOTATION_PASSWORD"
+	DefaultMediaType   = "application/vnd.docker.distribution.manifest.v2+json"
 )
 
 var (
@@ -66,8 +66,8 @@ func (opts *SecureFlagOpts) ApplyFlags(fs *pflag.FlagSet) {
 	setflagUsername(fs, &opts.Username)
 	setFlagPassword(fs, &opts.Password)
 	setFlagInsecureRegistry(fs, &opts.InsecureRegistry)
-	opts.Username = os.Getenv(defaultUsernameEnv)
-	opts.Password = os.Getenv(defaultPasswordEnv)
+	opts.Username = os.Getenv(DefaultUsernameEnv)
+	opts.Password = os.Getenv(DefaultPasswordEnv)
 }
 
 // Credential returns an auth.Credential from opts.Username and opts.Password.

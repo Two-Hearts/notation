@@ -27,6 +27,7 @@ import (
 	"github.com/notaryproject/notation-core-go/signature"
 	"github.com/notaryproject/notation-go/plugin/proto"
 	"github.com/notaryproject/notation-go/registry"
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	cmderr "github.com/notaryproject/notation/cmd/notation/internal/errors"
 	"github.com/notaryproject/notation/cmd/notation/internal/experimental"
 	"github.com/notaryproject/notation/internal/cmd"
@@ -40,7 +41,7 @@ import (
 
 type inspectOpts struct {
 	cmd.LoggingFlagOpts
-	SecureFlagOpts
+	cmdutil.SecureFlagOpts
 	reference         string
 	outputFormat      string
 	allowReferrersAPI bool

@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/notaryproject/notation-go/log"
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	"github.com/notaryproject/notation/internal/auth"
 	"github.com/notaryproject/notation/internal/cmd"
 	"github.com/spf13/cobra"
@@ -34,7 +35,7 @@ const urlDocHowToAuthenticate = "https://notaryproject.dev/docs/how-to/registry-
 
 type loginOpts struct {
 	cmd.LoggingFlagOpts
-	SecureFlagOpts
+	cmdutil.SecureFlagOpts
 	passwordStdin bool
 	server        string
 }

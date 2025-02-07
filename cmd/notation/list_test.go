@@ -15,6 +15,8 @@ package main
 
 import (
 	"testing"
+
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 )
 
 func TestListCommand_SecretsFromArgs(t *testing.T) {
@@ -22,7 +24,7 @@ func TestListCommand_SecretsFromArgs(t *testing.T) {
 	cmd := listCommand(opts)
 	expected := &listOpts{
 		reference: "ref",
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Password:         "password",
 			InsecureRegistry: true,
 			Username:         "user",
@@ -30,9 +32,9 @@ func TestListCommand_SecretsFromArgs(t *testing.T) {
 		maxSignatures: 100,
 	}
 	if err := cmd.ParseFlags([]string{
-		"--password", expected.Password,
+		"--password", expected.SecureFlagOpts.Password,
 		expected.reference,
-		"-u", expected.Username,
+		"-u", expected.SecureFlagOpts.Username,
 		"--insecure-registry"}); err != nil {
 		t.Fatalf("Parse Flag failed: %v", err)
 	}
@@ -45,12 +47,12 @@ func TestListCommand_SecretsFromArgs(t *testing.T) {
 }
 
 func TestListCommand_SecretsFromEnv(t *testing.T) {
-	t.Setenv(defaultUsernameEnv, "user")
-	t.Setenv(defaultPasswordEnv, "password")
+	t.Setenv(cmdutil.DefaultUsernameEnv, "user")
+	t.Setenv(cmdutil.DefaultPasswordEnv, "password")
 	opts := &listOpts{}
 	expected := &listOpts{
 		reference: "ref",
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Password: "password",
 			Username: "user",
 		},

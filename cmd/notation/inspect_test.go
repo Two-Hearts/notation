@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/notaryproject/notation-core-go/signature"
+	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	"github.com/notaryproject/notation/internal/cmd"
 )
 
@@ -25,7 +26,7 @@ func TestInspectCommand_SecretsFromArgs(t *testing.T) {
 	command := inspectCommand(opts)
 	expected := &inspectOpts{
 		reference: "ref",
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Password:         "password",
 			InsecureRegistry: true,
 			Username:         "user",
@@ -34,9 +35,9 @@ func TestInspectCommand_SecretsFromArgs(t *testing.T) {
 		maxSignatures: 100,
 	}
 	if err := command.ParseFlags([]string{
-		"--password", expected.Password,
+		"--password", expected.SecureFlagOpts.Password,
 		expected.reference,
-		"-u", expected.Username,
+		"-u", expected.SecureFlagOpts.Username,
 		"--insecure-registry",
 		"--output", "text"}); err != nil {
 		t.Fatalf("Parse Flag failed: %v", err)
@@ -50,12 +51,12 @@ func TestInspectCommand_SecretsFromArgs(t *testing.T) {
 }
 
 func TestInspectCommand_SecretsFromEnv(t *testing.T) {
-	t.Setenv(defaultUsernameEnv, "user")
-	t.Setenv(defaultPasswordEnv, "password")
+	t.Setenv(cmdutil.DefaultUsernameEnv, "user")
+	t.Setenv(cmdutil.DefaultPasswordEnv, "password")
 	opts := &inspectOpts{}
 	expected := &inspectOpts{
 		reference: "ref",
-		SecureFlagOpts: SecureFlagOpts{
+		SecureFlagOpts: cmdutil.SecureFlagOpts{
 			Password: "password",
 			Username: "user",
 		},

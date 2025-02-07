@@ -11,15 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package blob
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 
-	"github.com/notaryproject/notation-go/log"
 	notationregistry "github.com/notaryproject/notation-go/registry"
 	"github.com/notaryproject/notation/cmd/notation/internal/cmdutil"
 	notationauth "github.com/notaryproject/notation/internal/auth"
@@ -31,45 +29,15 @@ import (
 	"oras.land/oras-go/v2/registry/remote/credentials"
 )
 
-// inputType denotes the user input type
-type inputType int
-
-const (
-	inputTypeRegistry  inputType = 1 + iota // inputType remote registry
-	inputTypeOCILayout                      // inputType oci-layout
-)
-
-// getRepository returns a notationregistry.Repository given user input
-// type and user input reference
-func getRepository(ctx context.Context, inputType inputType, reference string, opts *cmdutil.SecureFlagOpts, forceReferrersTag bool) (notationregistry.Repository, error) {
-	switch inputType {
-	case inputTypeRegistry:
-		return getRemoteRepository(ctx, opts, reference, forceReferrersTag)
-	case inputTypeOCILayout:
-		layoutPath, _, err := parseOCILayoutReference(reference)
-		if err != nil {
-			return nil, err
-		}
-		return notationregistry.NewOCIRepository(layoutPath, notationregistry.RepositoryOptions{})
-	default:
-		return nil, errors.New("unsupported input type")
-	}
-}
-
-// getRemoteRepository returns a registry.Repository.
-// When forceReferrersTag is true, Notation will always generate an image index
-// according to the Referrers tag schema to store signature.
-//
-// When forceReferrersTag is false, Notation will first try to store the
-// signature as a referrer according to the Referrers API. If the Referrers API
-// is not supported, fallback to use the referrers tag schema.
-// This flag is always FALSE when verify/list/inspect signatures.
+// getBlobRemoteRepository returns a registry.BlobRepository.
+// Notation will first try to store the signature as a referrer according to
+// the Referrers API. If the Referrers API is not supported, fallback to use the
+// referrers tag schema.
 //
 // References:
 // https://github.com/opencontainers/distribution-spec/blob/v1.1.0/spec.md#listing-referrers
 // https://github.com/opencontainers/distribution-spec/blob/v1.1.0/spec.md#referrers-tag-schema
-func getRemoteRepository(ctx context.Context, opts *cmdutil.SecureFlagOpts, reference string, forceReferrersTag bool) (notationregistry.Repository, error) {
-	logger := log.GetLogger(ctx)
+func getBlobRemoteRepository(ctx context.Context, opts *cmdutil.SecureFlagOpts, reference string) (notationregistry.BlobRepository, error) {
 	ref, err := registry.ParseReference(reference)
 	if err != nil {
 		return nil, fmt.Errorf("%q: %w. Expecting <registry>/<repository>:<tag> or <registry>/<repository>@<digest>", reference, err)
@@ -83,15 +51,7 @@ func getRemoteRepository(ctx context.Context, opts *cmdutil.SecureFlagOpts, refe
 		return nil, err
 	}
 
-	if forceReferrersTag {
-		logger.Info("The referrers tag schema is always attempted")
-		if err := remoteRepo.SetReferrersCapability(false); err != nil {
-			return nil, err
-		}
-	} else {
-		logger.Info("Allowed to access the referrers API, fallback if not supported")
-	}
-	return notationregistry.NewRepository(remoteRepo), nil
+	return notationregistry.NewBlobRepository(remoteRepo), nil
 }
 
 func getRepositoryClient(ctx context.Context, opts *cmdutil.SecureFlagOpts, ref registry.Reference) (*remote.Repository, error) {
@@ -105,19 +65,6 @@ func getRepositoryClient(ctx context.Context, opts *cmdutil.SecureFlagOpts, ref 
 		Reference: ref,
 		PlainHTTP: insecureRegistry,
 	}, nil
-}
-
-func getRegistryLoginClient(ctx context.Context, opts *cmdutil.SecureFlagOpts, serverAddress string) (*remote.Registry, error) {
-	reg, err := remote.NewRegistry(serverAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	reg.Client, reg.PlainHTTP, err = getAuthClient(ctx, opts, reg.Reference, false)
-	if err != nil {
-		return nil, err
-	}
-	return reg, nil
 }
 
 // getAuthClient returns an *auth.Client and a bool indicating if the registry
