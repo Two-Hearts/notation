@@ -70,9 +70,11 @@ Example - Verify a blob when both blob and its signature are stored in a remote 
 		Long:  longMessage,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 && !cmd.Flags().Changed("reference") {
-				return errors.New("missing path to the blob artifact: use `notation blob verify --help` to see what parameters are required")
+				return errors.New("missing path or reference to the blob artifact: use `notation blob verify --help` to see what parameters are required")
 			}
-			opts.blobPath = args[0]
+			if !cmd.Flags().Changed("reference") {
+				opts.blobPath = args[0]
+			}
 			return nil
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
