@@ -138,6 +138,7 @@ func runVerify(command *cobra.Command, cmdOpts *blobVerifyOpts) error {
 		if err != nil {
 			return err
 		}
+		verifyBlobOpts.ArtifactReference = reference
 		_, _, outcomes, err := notation.VerifyBlobFromRegistry(ctx, blobVerifier, sigRepo, verifyBlobOpts)
 		err = ioutil.PrintVerificationFailure(outcomes, cmdOpts.blobPath, err, true)
 		if err != nil {
