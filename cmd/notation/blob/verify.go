@@ -81,8 +81,8 @@ Example - Verify a blob when both blob and its signature are stored in a remote 
 			if cmd.Flags().Changed("reference") && opts.reference == "" {
 				return errors.New("--reference is set but with empty value")
 			}
-			if !cmd.Flags().Changed("reference") && opts.signaturePath == "" {
-				return errors.New("filepath of the signature cannot be empty")
+			if cmd.Flags().Changed("signature") && opts.signaturePath == "" {
+				return errors.New("--signature is set but with empty value")
 			}
 			if cmd.Flags().Changed("media-type") && opts.blobMediaType == "" {
 				return errors.New("--media-type is set but with empty value")
