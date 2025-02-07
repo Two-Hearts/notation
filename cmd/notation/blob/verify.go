@@ -100,8 +100,8 @@ Example - Verify a blob when both blob and its signature are stored in a remote 
 	command.Flags().StringVar(&opts.blobMediaType, "media-type", "", "media type of the blob to verify")
 	command.Flags().StringVar(&opts.policyStatementName, "policy-name", "", "policy name to verify against. If not provided, the global policy is used if exists")
 	cmd.SetPflagUserMetadata(command.Flags(), &opts.userMetadata, cmd.PflagUserMetadataVerifyUsage)
-	//command.MarkFlagRequired("signature")
 	command.MarkFlagsMutuallyExclusive("reference", "signature")
+	command.MarkFlagsOneRequired("reference", "signature")
 	return command
 }
 
@@ -140,11 +140,11 @@ func runVerify(command *cobra.Command, cmdOpts *blobVerifyOpts) error {
 		}
 		verifyBlobOpts.ArtifactReference = reference
 		_, _, outcomes, err := notation.VerifyBlobFromRegistry(ctx, blobVerifier, sigRepo, verifyBlobOpts)
-		err = ioutil.PrintVerificationFailure(outcomes, cmdOpts.blobPath, err, true)
+		err = ioutil.PrintVerificationFailure(outcomes, reference, err, true)
 		if err != nil {
 			return err
 		}
-		ioutil.PrintVerificationSuccess(outcomes, cmdOpts.blobPath)
+		ioutil.PrintVerificationSuccess(outcomes, reference)
 		return nil
 	}
 
